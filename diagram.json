@@ -1,0 +1,67 @@
+{
+    "version": 1,
+    "author": "Sergio Gasquez Arcos",
+    "editor": "wokwi",
+    "parts": [
+        {
+            "type": "board-esp32-devkit-c-v4",
+            "id": "esp",
+            "top": -57.6,
+            "left": 187.24,
+            "attrs": {
+                "builder": "rust-nostd-esp"
+            }
+        },
+        {
+            "type": "wokwi-ir-receiver",
+            "id": "ir1",
+            "top": -183.75,
+            "left": 27.02,
+            "attrs": {}
+        }
+    ],
+    "connections": [
+        [
+            "esp:TX",
+            "$serialMonitor:RX",
+            "",
+            []
+        ],
+        [
+            "esp:RX",
+            "$serialMonitor:TX",
+            "",
+            []
+        ],
+        [
+            "ir1:GND",
+            "esp:GND.2",
+            "black",
+            [
+                "v19.2",
+                "h240"
+            ]
+        ],
+        [
+            "ir1:DAT",
+            "esp:35",
+            "green",
+            [
+                "v0"
+            ]
+        ],
+        [
+            "ir1:VCC",
+            "esp:5V",
+            "red",
+            [
+                "v0"
+            ]
+        ]
+    ],
+    "serialMonitor": {
+        "display": "terminal",
+        "convertEol": true
+    },
+    "dependencies": {}
+}
