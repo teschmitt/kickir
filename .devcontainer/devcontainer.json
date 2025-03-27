@@ -44,10 +44,7 @@
       ]
     }
   },
-  "forwardPorts": [
-    3333,
-    8000
-  ],
+  "forwardPorts": [3333, 8000],
   "workspaceMount": "source=${localWorkspaceFolder},target=/home/esp/kickir,type=bind,consistency=cached",
   "workspaceFolder": "/home/esp/kickir"
 }

@@ -10,12 +10,13 @@ use std::sync::Arc;
 
 pub(crate) trait Server<T> {
     fn new(config: T) -> Self;
-    fn send(self: &Self, goals: &str);
+    fn send(&self, goals: &str);
 }
 
 pub(crate) struct BleConfig {
     pub(crate) service_uuid: BleUuid,
-    pub(crate) characteristic_uuid: BleUuid,
+    pub(crate) goals_uuid: BleUuid,
+    pub(crate) ir_threshold_uuid: BleUuid,
 }
 
 pub(crate) struct KickerBle<'a> {
@@ -23,6 +24,7 @@ pub(crate) struct KickerBle<'a> {
     _server: &'a mut BLEServer,
     _config: BleConfig,
     goals_characteristic: Arc<Mutex<BLECharacteristic>>,
+    ir_threshold_characteristic: Arc<Mutex<BLECharacteristic>>,
     _service: Arc<Mutex<BLEService>>,
 }
 
@@ -31,7 +33,7 @@ impl Server<BleConfig> for KickerBle<'_> {
         let ble_device = BLEDevice::take();
         let ble_advertising = ble_device.get_advertising();
         let _server = ble_device.get_server();
-        let _service = _server.create_service(config.service_uuid);
+        let service = _server.create_service(config.service_uuid);
         // let mut client_connected = false;
 
         // create server
@@ -55,10 +57,14 @@ impl Server<BleConfig> for KickerBle<'_> {
             });
 
         // create characteristics
-        let goals_characteristic = _service.lock().create_characteristic(
-            config.characteristic_uuid,
+        let goals_characteristic = service.lock().create_characteristic(
+            config.goals_uuid,
             NimbleProperties::READ | NimbleProperties::NOTIFY,
         );
+        let ir_thres_characteristic = service
+            .lock()
+            .create_characteristic(config.ir_threshold_uuid, NimbleProperties::WRITE);
+
         goals_characteristic.lock().set_value(b"Number of Goals");
         // let goals_descriptor = goals_characteristic
         //     .lock()
@@ -108,11 +114,11 @@ impl Server<BleConfig> for KickerBle<'_> {
             _server,
             _config: config,
             goals_characteristic,
-            _service,
+            _service: service,
         }
     }
 
-    fn send(self: &Self, goals: &str) {
+    fn send(&self, goals: &str) {
         self.goals_characteristic
             .lock()
             .set_value(goals.as_bytes())

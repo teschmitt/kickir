@@ -19,31 +19,32 @@ mod server;
 // consts for BLE functionality
 const SERVICE_UUID: BleUuid = uuid128!("c03f245f-d01c-4886-850b-408bc53fe63a");
 const CHARACTERISTIC_UUID: BleUuid = uuid128!("03524118-dfd4-40d5-8f28-f81e05442bba");
+const IR_THRESH_UUID: BleUuid = uuid128!("e468f847-4ee5-4928-8b8f-413cb8086c2c");
 // const MODE_CHARACTERISTIC_UUID: BleUuid = uuid128!("a436bad4-7cd6-44da-bf2c-bf000b1d1218");
 // consts for ADC / photoelectric gate
 const THRESHOLD_DETECT_OBJECT: u16 = 50;
 const WAIT_AFTER_DETECTION: Duration = Duration::from_secs(2);
 
 struct SensorArray<'a> {
-    adc_gpio34: AdcChannelDriver<'a, Gpio34, &'a AdcDriver<'a, ADC1>>, // left
-    adc_gpio35: AdcChannelDriver<'a, Gpio35, &'a AdcDriver<'a, ADC1>>, // left
-    adc_gpio13: AdcChannelDriver<'a, Gpio13, &'a AdcDriver<'a, ADC2>>, // right
-    adc_gpio14: AdcChannelDriver<'a, Gpio14, &'a AdcDriver<'a, ADC2>>, // right
+    adc_gpio34: AdcChannelDriver<'a, Gpio34, &'a AdcDriver<'a, ADC1>>, // home
+    adc_gpio35: AdcChannelDriver<'a, Gpio35, &'a AdcDriver<'a, ADC1>>, // home
+    adc_gpio13: AdcChannelDriver<'a, Gpio13, &'a AdcDriver<'a, ADC2>>, // away
+    adc_gpio14: AdcChannelDriver<'a, Gpio14, &'a AdcDriver<'a, ADC2>>, // away
 }
 
 #[derive(Default)]
 enum DetectedGoal {
     #[default]
     None,
-    Left,
-    Right,
+    Home,
+    Away,
 }
 
 impl Display for DetectedGoal {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DetectedGoal::Left => write!(f, "Left"),
-            DetectedGoal::Right => write!(f, "Right"),
+            DetectedGoal::Home => write!(f, "Home"),
+            DetectedGoal::Away => write!(f, "Away"),
             DetectedGoal::None => write!(f, "None"),
         }
     }
@@ -62,12 +63,12 @@ impl<'a> GoalDetector<'a> {
         }
     }
 
-    fn left_triggered(&mut self) -> Result<bool> {
+    fn home_triggered(&mut self) -> Result<bool> {
         Ok(self.sensors.adc_gpio34.read()? < THRESHOLD_DETECT_OBJECT
             || self.sensors.adc_gpio35.read()? < THRESHOLD_DETECT_OBJECT)
     }
 
-    fn right_triggered(&mut self) -> Result<bool> {
+    fn away_triggered(&mut self) -> Result<bool> {
         Ok(self.sensors.adc_gpio13.read()? < THRESHOLD_DETECT_OBJECT
             || self.sensors.adc_gpio14.read()? < THRESHOLD_DETECT_OBJECT)
     }
@@ -75,17 +76,17 @@ impl<'a> GoalDetector<'a> {
     pub fn scan(&mut self) -> DetectedGoal {
         match (
             self.last_goal.elapsed() >= WAIT_AFTER_DETECTION,
-            self.left_triggered(),
-            self.right_triggered(),
+            self.home_triggered(),
+            self.away_triggered(),
         ) {
-            (true, Ok(true), _) => DetectedGoal::Left,
-            (true, _, Ok(true)) => DetectedGoal::Right,
+            (true, Ok(true), _) => DetectedGoal::Home,
+            (true, _, Ok(true)) => DetectedGoal::Away,
             (_, Err(e), _) => {
-                error!("Error reading left sensor: {:?}", e);
+                error!("Error reading home sensor: {:?}", e);
                 DetectedGoal::None
             }
             (_, _, Err(e)) => {
-                error!("Error reading right sensor: {:?}", e);
+                error!("Error reading away sensor: {:?}", e);
                 DetectedGoal::None
             }
             _ => DetectedGoal::None,
@@ -100,7 +101,8 @@ fn main() -> Result<()> {
     // set up BLE
     let kicker_server = KickerBle::new(BleConfig {
         service_uuid: SERVICE_UUID,
-        characteristic_uuid: CHARACTERISTIC_UUID,
+        goals_uuid: CHARACTERISTIC_UUID,
+        ir_threshold_uuid: IR_THRESH_UUID,
     });
 
     let peripherals = Peripherals::take()?;
