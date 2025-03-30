@@ -61,7 +61,7 @@ impl Server<BleConfig> for KickerBle<'_> {
             config.goals_uuid,
             NimbleProperties::READ | NimbleProperties::NOTIFY,
         );
-        let ir_thres_characteristic = service
+        let ir_threshold_characteristic = service
             .lock()
             .create_characteristic(config.ir_threshold_uuid, NimbleProperties::WRITE);
 
@@ -72,30 +72,17 @@ impl Server<BleConfig> for KickerBle<'_> {
         // goals_descriptor.lock().set_value(b"Number of Goals");
         debug!("Characteristic 'Number of goals' is set.");
 
-        // mode characteristic. Production = 0, Debug = 1
-        // let mode_characteristic = service.lock().create_characteristic(
-        //     config.mode_characteristic_uuid,
-        //     NimbleProperties::WRITE | NimbleProperties::READ,
-        // );
-        // mode_characteristic.lock().on_write(|args| {
-        //     if let Ok(val) = std::str::from_utf8(args.recv_data()) {
-        //         info!("Got new value for mode_characteristic: '{val}'");
-        //         if val == "1" || val.to_lowercase() == "true" || val.to_lowercase() == "debug" {
-        //             // set server into debug mode
-        //             // DEBUG_MODE.lock().borrow().set(true);
-        //             // Lazy::force(&DEBUG_MODE).lock().set(true);
-        //             // DEBUG_MODE.lock().set(true);
-        //         } else {
-        //             // Lazy::force(&DEBUG_MODE).lock().set(false);
-        //             // DEBUG_MODE.lock().set(true);
-        //         }
-        //         // debug!("New value for DEBUG_MODE: {:?}", DEBUG_MODE.lock().get());
-        //     };
-        // });
-        // let mode_descriptor = mode_characteristic
-        //     .lock()
-        //     .create_descriptor(BleUuid::from_uuid16(0x2902), DescriptorProperties::READ);
-        // mode_descriptor.lock().set_value(b"Operational mode");
+        ir_threshold_characteristic
+            .lock()
+            .on_write(|args| {
+                if let Ok(val) = std::str::from_utf8(args.recv_data()) {
+                    info!("Got new value for ir_threshold_characteristic: '{val}'");
+                };
+            })
+            .on_read(move |_, _| {
+                // return current threshold values
+                info!("return current threshold values");
+            });
 
         let _ = BLEDevice::set_device_name("Goal Counter");
         ble_advertising
@@ -114,6 +101,7 @@ impl Server<BleConfig> for KickerBle<'_> {
             _server,
             _config: config,
             goals_characteristic,
+            ir_threshold_characteristic,
             _service: service,
         }
     }
