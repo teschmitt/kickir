@@ -19,6 +19,7 @@ opt-level = "z"
 
 [features]
 default = []
+scan_log = []
 experimental = ["esp-idf-svc/experimental"]
 
 [dependencies]

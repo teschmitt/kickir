@@ -1,7 +1,10 @@
-use std::{fmt::Display, time::{Duration, Instant}};
+use crate::sensor::SensorArray;
 use anyhow::Result;
 use log::error;
-use crate::sensor::SensorArray;
+use std::{
+    fmt::Display,
+    time::{Duration, Instant},
+};
 
 const WAIT_AFTER_DETECTION: Duration = Duration::from_secs(2);
 const THRESHOLD_DETECT_OBJECT: u16 = 50;
@@ -69,5 +72,9 @@ impl<'a> GoalDetector<'a> {
             }
             _ => DetectedGoal::None,
         }
+    }
+
+    pub fn last_goal_now(&mut self) {
+        self.last_goal = Instant::now();
     }
 }
