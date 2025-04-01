@@ -9,7 +9,7 @@ use esp_idf_hal::{
     gpio::{Gpio13, Gpio14, Gpio34, Gpio35},
 };
 
-pub type ThreshValue = u32;
+pub type ThreshValue = u16;
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseThreshChangeError;

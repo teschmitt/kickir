@@ -6,7 +6,7 @@ use log::{debug, error, info};
 use std::sync::Arc;
 
 use crate::{
-    sensor::{ThreshChange, ThreshSide, ThreshValue},
+    sensor::{ThreshChange, ThreshSide},
     IR_THRESHOLD_AWAY, IR_THRESHOLD_HOME,
 };
 

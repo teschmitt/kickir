@@ -1,4 +1,4 @@
-use crate::sensor::SensorArray;
+use crate::{sensor::SensorArray, IR_THRESHOLD_AWAY, IR_THRESHOLD_HOME};
 use anyhow::Result;
 use log::error;
 use std::{
@@ -7,7 +7,6 @@ use std::{
 };
 
 const WAIT_AFTER_DETECTION: Duration = Duration::from_secs(2);
-const THRESHOLD_DETECT_OBJECT: u16 = 50;
 
 #[derive(Default)]
 pub enum DetectedGoal {
@@ -30,8 +29,6 @@ impl Display for DetectedGoal {
 pub struct GoalDetector<'a> {
     pub last_goal: std::time::Instant,
     sensors: SensorArray<'a>,
-    threshold_home: u16,
-    threshold_away: u16,
 }
 
 impl<'a> GoalDetector<'a> {
@@ -39,19 +36,17 @@ impl<'a> GoalDetector<'a> {
         Self {
             last_goal: Instant::now(),
             sensors,
-            threshold_home: THRESHOLD_DETECT_OBJECT,
-            threshold_away: THRESHOLD_DETECT_OBJECT,
         }
     }
 
     fn home_triggered(&mut self) -> Result<bool> {
-        Ok(self.sensors.adc_gpio34.read()? < self.threshold_home
-            || self.sensors.adc_gpio35.read()? < self.threshold_home)
+        let t = *IR_THRESHOLD_HOME.lock().unwrap();
+        Ok(self.sensors.adc_gpio34.read()? < t || self.sensors.adc_gpio35.read()? < t)
     }
 
     fn away_triggered(&mut self) -> Result<bool> {
-        Ok(self.sensors.adc_gpio13.read()? < self.threshold_away
-            || self.sensors.adc_gpio14.read()? < self.threshold_away)
+        let t = *IR_THRESHOLD_AWAY.lock().unwrap();
+        Ok(self.sensors.adc_gpio13.read()? < t || self.sensors.adc_gpio14.read()? < t)
     }
 
     pub fn scan(&mut self) -> DetectedGoal {
@@ -76,13 +71,5 @@ impl<'a> GoalDetector<'a> {
 
     pub fn last_goal_now(&mut self) {
         self.last_goal = Instant::now();
-    }
-
-    pub fn set_threshold_home(&mut self, threshold: u16) {
-        self.threshold_home = threshold;
-    }
-
-    pub fn set_threshold_away(&mut self, threshold: u16) {
-        self.threshold_away = threshold;
     }
 }

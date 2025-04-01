@@ -30,6 +30,7 @@ const SERVER_THREAD_NAME: Option<&[u8]> = Some(b"kickir_server\0");
 const SERVER_THREAD_PRIORITY: u8 = 5;
 
 lazy_static! {
+    // these are global mutable variables used to control the IR threshold
     static ref IR_THRESHOLD_HOME: Arc<Mutex<ThreshValue>> = Arc::new(Mutex::new(50));
     static ref IR_THRESHOLD_AWAY: Arc<Mutex<ThreshValue>> = Arc::new(Mutex::new(50));
 }
