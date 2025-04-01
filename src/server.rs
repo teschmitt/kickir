@@ -2,8 +2,13 @@ use esp32_nimble::{
     utilities::{mutex::Mutex, BleUuid},
     BLEAdvertisementData, BLECharacteristic, BLEDevice, BLEServer, BLEService, NimbleProperties,
 };
-use log::{debug, info};
+use log::{debug, error, info};
 use std::sync::Arc;
+
+use crate::{
+    sensor::{ThreshChange, ThreshSide, ThreshValue},
+    IR_THRESHOLD_AWAY, IR_THRESHOLD_HOME,
+};
 
 // Stuff that's missing from original implementation:
 //   * pAdvertising->setMinPreferred(0x06) interval is not set
@@ -24,7 +29,7 @@ pub(crate) struct KickerBle<'a> {
     _server: &'a mut BLEServer,
     _config: BleConfig,
     goals_characteristic: Arc<Mutex<BLECharacteristic>>,
-    ir_threshold_characteristic: Arc<Mutex<BLECharacteristic>>,
+    _ir_threshold_characteristic: Arc<Mutex<BLECharacteristic>>,
     _service: Arc<Mutex<BLEService>>,
 }
 
@@ -61,7 +66,7 @@ impl Server<BleConfig> for KickerBle<'_> {
             config.goals_uuid,
             NimbleProperties::READ | NimbleProperties::NOTIFY,
         );
-        let ir_threshold_characteristic = service
+        let _ir_threshold_characteristic = service
             .lock()
             .create_characteristic(config.ir_threshold_uuid, NimbleProperties::WRITE);
 
@@ -72,11 +77,22 @@ impl Server<BleConfig> for KickerBle<'_> {
         // goals_descriptor.lock().set_value(b"Number of Goals");
         debug!("Characteristic 'Number of goals' is set.");
 
-        ir_threshold_characteristic
+        _ir_threshold_characteristic
             .lock()
-            .on_write(|args| {
+            .on_write(move |args| {
                 if let Ok(val) = std::str::from_utf8(args.recv_data()) {
                     info!("Got new value for ir_threshold_characteristic: '{val}'");
+                    if let Ok(change) = val.parse::<ThreshChange>() {
+                        info!("[BLE] Parsed value: {change:?}");
+                        let mut new_thresh = match change.side {
+                            ThreshSide::Home => IR_THRESHOLD_HOME.lock().unwrap(),
+                            ThreshSide::Away => IR_THRESHOLD_AWAY.lock().unwrap(),
+                        };
+                        *new_thresh = change.new_value;
+                        // TODO: set value here!
+                    } else {
+                        error!("Failed to parse threshold value");
+                    }
                 };
             })
             .on_read(move |_, _| {
@@ -101,7 +117,7 @@ impl Server<BleConfig> for KickerBle<'_> {
             _server,
             _config: config,
             goals_characteristic,
-            ir_threshold_characteristic,
+            _ir_threshold_characteristic,
             _service: service,
         }
     }

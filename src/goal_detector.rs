@@ -77,4 +77,12 @@ impl<'a> GoalDetector<'a> {
     pub fn last_goal_now(&mut self) {
         self.last_goal = Instant::now();
     }
+
+    pub fn set_threshold_home(&mut self, threshold: u16) {
+        self.threshold_home = threshold;
+    }
+
+    pub fn set_threshold_away(&mut self, threshold: u16) {
+        self.threshold_away = threshold;
+    }
 }

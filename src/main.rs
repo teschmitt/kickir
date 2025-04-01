@@ -7,21 +7,32 @@ use esp_idf_hal::{
     task::thread::ThreadSpawnConfiguration,
 };
 use goal_detector::{DetectedGoal, GoalDetector};
+use lazy_static::lazy_static;
 use log::{error, info};
-use sensor::SensorArray;
+use sensor::{SensorArray, ThreshValue};
 use server::Server;
 use server::{BleConfig, KickerBle};
-use std::thread;
+use std::{
+    sync::{Arc, Mutex},
+    thread,
+};
 
 mod goal_detector;
 mod sensor;
 mod server;
 
-const SCAN_THREAD_PRIORITY: u8 = 10;
+const SCANNER_CORE: Core = Core::Core0;
+const SCANNER_THREAD_NAME: Option<&[u8]> = Some(b"ir_scanner\0");
+const SCANNER_THREAD_PRIORITY: u8 = 10;
+
+const SERVER_CORE: Core = Core::Core1;
+const SERVER_THREAD_NAME: Option<&[u8]> = Some(b"kickir_server\0");
 const SERVER_THREAD_PRIORITY: u8 = 5;
 
-const SCANNER_CORE: Core = Core::Core0;
-const SERVER_CORE: Core = Core::Core1;
+lazy_static! {
+    static ref IR_THRESHOLD_HOME: Arc<Mutex<ThreshValue>> = Arc::new(Mutex::new(50));
+    static ref IR_THRESHOLD_AWAY: Arc<Mutex<ThreshValue>> = Arc::new(Mutex::new(50));
+}
 
 // consts for BLE functionality
 const SERVICE_UUID: BleUuid = uuid128!("c03f245f-d01c-4886-850b-408bc53fe63a");
@@ -35,7 +46,7 @@ fn main() -> Result<()> {
     esp_idf_svc::log::EspLogger::initialize_default();
 
     let peripherals = Peripherals::take()?;
-    let pins = peripherals.pins;
+    let pins: esp_idf_hal::gpio::Pins = peripherals.pins;
 
     info!("Starting kickir BLE server...");
     // set up BLE
@@ -61,8 +72,8 @@ fn main() -> Result<()> {
     let (goal_tx, goal_rx) = std::sync::mpsc::channel();
 
     ThreadSpawnConfiguration {
-        name: Some(b"ir_scanner\0"),
-        priority: SCAN_THREAD_PRIORITY,
+        name: SCANNER_THREAD_NAME,
+        priority: SCANNER_THREAD_PRIORITY,
         pin_to_core: Some(SCANNER_CORE), // same as the watchdog
         ..Default::default()
     }
@@ -130,8 +141,10 @@ fn main() -> Result<()> {
                 }
             }
         })?;
+
+    // BLE server thread setup and start
     ThreadSpawnConfiguration {
-        name: Some(b"kickir_server\0"),
+        name: SERVER_THREAD_NAME,
         priority: SERVER_THREAD_PRIORITY,
         pin_to_core: Some(SERVER_CORE),
         ..Default::default()
@@ -139,7 +152,7 @@ fn main() -> Result<()> {
     .set()?;
 
     let _ble_thread = thread::Builder::new()
-        .stack_size(8192)
+        .stack_size(4096)
         .spawn(move || -> Result<()> {
             let mut goal_id: u32 = 0;
             loop {

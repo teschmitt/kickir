@@ -29,6 +29,7 @@ esp-idf-hal ={ version = "0.45.2"}
 esp-idf-svc = { version = "0.51", default-features = false, features = ["alloc", "critical-section", "embassy-time-driver", "embassy-sync"] }
 esp-idf-sys = { version = "0.36", default-features = false }
 esp32-nimble = { version = "0.10.0", default-features = false}
+lazy_static = {version = "1.5.0"}
 log = { version = "0.4" }
 once_cell = { version = "1.20.2" }
 
