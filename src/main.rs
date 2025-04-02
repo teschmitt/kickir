@@ -17,6 +17,9 @@ use std::{
     thread,
 };
 
+#[cfg(feature = "scan_log")]
+use std::time::{Duration, Instant};
+
 mod goal_detector;
 mod sensor;
 mod server;
