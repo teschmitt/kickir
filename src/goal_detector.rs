@@ -6,6 +6,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+/// amount of time to wait after a goal is detected before allowing another goal to be detected
 const WAIT_AFTER_DETECTION: Duration = Duration::from_secs(2);
 
 #[derive(Default)]

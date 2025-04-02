@@ -155,14 +155,10 @@ fn main() -> Result<()> {
     let _ble_thread = thread::Builder::new()
         .stack_size(4096)
         .spawn(move || -> Result<()> {
-            let mut goal_id: u32 = 0;
             loop {
                 let goal = goal_rx.recv()?;
-                goal_id = goal_id.saturating_add(1);
-                info!("[BLE] Sending goal ({}): '{}'", goal_id, goal);
-                let send_str = format!("{}: {}", goal_id, goal);
-                // kicker_server.send(&goal.to_string());
-                kicker_server.send(&send_str);
+                info!("[BLE] Sending goal: '{}'", goal);
+                kicker_server.send(&goal.to_string());
             }
         })?;
 
